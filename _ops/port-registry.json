@@ -1,0 +1,27 @@
+{
+  "description": "Master port registry for all ProjectsHome services. No two projects share a port.",
+  "updated": "2026-02-18",
+  "ports": {
+    "3210": { "project": "home-hub", "type": "dev-server", "launcher": "Home Hub.bat" },
+    "4000": { "project": "master-trade-bot", "type": "dashboard", "launcher": "Master Trade Bot.lnk" },
+    "4100": { "project": "master-trading-system", "type": "dashboard+api", "launcher": "Master Trading System.lnk" },
+    "8070": { "project": "lancewfisher-v2", "type": "static", "launcher": "Lance Fisher Splash.bat" },
+    "8071": { "project": "galleon-splash", "type": "static", "launcher": "Galleon Splash.bat" },
+    "8075": { "project": "JumpQuest", "type": "static", "launcher": "Jamison Gaming's Jump Quest!.lnk" },
+    "8076": { "project": "noco-app-demos", "type": "static", "launcher": "NoCo App Studio.lnk" },
+    "8080": { "project": "polymarket-sniper", "type": "dashboard", "launcher": "Polymarket Sniper Dashboard.bat" },
+    "8090": { "project": "project-hub", "type": "dashboard", "launcher": "ProjectsHome Hub.lnk" },
+    "8095": { "project": "auton", "type": "api", "launcher": "Auton.lnk / Auton Dashboard.lnk" },
+    "8096": { "project": "one-three-net", "type": "static", "launcher": "one-three.net.lnk" }
+  },
+  "notes": [
+    "Dev servers (Vite/Next.js) use dynamic ports assigned by the framework",
+    "Crown & Conquer (frontier-bastion): Vite assigns port dynamically (usually 5173)",
+    "E2EE Messenger: Next.js assigns port dynamically (usually 3000)",
+    "Harmony Medspa: Expo/Vite assigns port dynamically",
+    "Polymarket BTC Assistant: Console app, no HTTP server",
+    "Solana Bot: Dev server, dynamic port",
+    "Profit Desk: Console app, no HTTP server",
+    "Trading Profit Engine: Orchestrator, depends on master-trade-bot (4000) and profit-desk"
+  ]
+}
