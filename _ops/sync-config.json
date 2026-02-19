@@ -1,0 +1,31 @@
+{
+  "version": 1,
+  "updated": "2026-02-18",
+  "sync_interval_minutes": 5,
+  "pull_strategy": "ff-only",
+  "auto_stash": false,
+  "auto_push": false,
+  "notifications": "log",
+  "log_file": "D:/ProjectsHome/project-hub/_logs/sync.log",
+  "repos": [
+    { "name": "auton", "path": "D:/ProjectsHome/auton", "enabled": true },
+    { "name": "e2ee-messenger", "path": "D:/ProjectsHome/e2ee-messenger", "enabled": true },
+    { "name": "frontier-bastion", "path": "D:/ProjectsHome/frontier-bastion", "enabled": true },
+    { "name": "harmony-medspa", "path": "D:/ProjectsHome/harmony-medspa", "enabled": true },
+    { "name": "home-hub", "path": "D:/ProjectsHome/home-hub", "enabled": true },
+    { "name": "JumpQuest", "path": "D:/ProjectsHome/JumpQuest", "enabled": true },
+    { "name": "lancewfisher-v2", "path": "D:/ProjectsHome/lancewfisher-v2", "enabled": true },
+    { "name": "market-dashboard", "path": "D:/ProjectsHome/market-dashboard", "enabled": true },
+    { "name": "master-trade-bot", "path": "D:/ProjectsHome/master-trade-bot", "enabled": true },
+    { "name": "master-trading-system", "path": "D:/ProjectsHome/master-trading-system", "enabled": true },
+    { "name": "noco-app-demos", "path": "D:/ProjectsHome/noco-app-demos", "enabled": true },
+    { "name": "one-three-net", "path": "D:/ProjectsHome/one-three-net", "enabled": true },
+    { "name": "polymarket-sniper", "path": "D:/ProjectsHome/polymarket-sniper", "enabled": true },
+    { "name": "polymarketbtc15massistant", "path": "D:/ProjectsHome/polymarketbtc15massistant", "enabled": true },
+    { "name": "profit-desk", "path": "D:/ProjectsHome/profit-desk", "enabled": true },
+    { "name": "project-hub", "path": "D:/ProjectsHome/project-hub", "enabled": true },
+    { "name": "solana-bot", "path": "D:/ProjectsHome/solana-bot", "enabled": true },
+    { "name": "tax-prep-system", "path": "D:/ProjectsHome/tax-prep-system", "enabled": true },
+    { "name": "trading-profit-engine", "path": "D:/ProjectsHome/trading-profit-engine", "enabled": true }
+  ]
+}

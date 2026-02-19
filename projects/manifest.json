@@ -1,0 +1,297 @@
+{
+  "version": 1,
+  "updated": "2026-02-18T21:47:00Z",
+  "generated_by": "Claude Opus 4.6 (Project Consolidation Engineer)",
+  "projects": [
+    {
+      "name": "Auton",
+      "path": "D:/ProjectsHome/auton",
+      "type": "bot",
+      "status": "active",
+      "primary_language": "Python",
+      "github_remote": "https://github.com/lance-fisher/auton",
+      "last_touched": "2026-02-13",
+      "tags": ["automation", "ai-agent", "background-worker"],
+      "notes": "Autonomous background worker. DRY_RUN by default.",
+      "entrypoint": "python run.py"
+    },
+    {
+      "name": "E2EE P2P Messenger",
+      "path": "D:/ProjectsHome/e2ee-messenger",
+      "type": "app",
+      "status": "active",
+      "primary_language": "TypeScript",
+      "github_remote": "https://github.com/lance-fisher/e2ee-messenger",
+      "last_touched": "2026-02-12",
+      "tags": ["messaging", "encryption", "p2p", "security"],
+      "notes": "End-to-end encrypted messaging. Monorepo: packages/crypto, apps/server, apps/web.",
+      "entrypoint": "npm run dev"
+    },
+    {
+      "name": "Crown & Conquest (RTS Game)",
+      "path": "D:/ProjectsHome/frontier-bastion",
+      "type": "app",
+      "status": "active",
+      "primary_language": "TypeScript",
+      "github_remote": "https://github.com/lance-fisher/frontier-bastion",
+      "last_touched": "2026-02-05",
+      "tags": ["game", "rts", "canvas", "typescript"],
+      "notes": "Web-based RTS game. 2.5D isometric transformation ~90% complete.",
+      "entrypoint": "npm run dev"
+    },
+    {
+      "name": "Harmony Skin & Wellness",
+      "path": "D:/ProjectsHome/harmony-medspa",
+      "type": "app",
+      "status": "active",
+      "primary_language": "TypeScript",
+      "github_remote": "https://github.com/lance-fisher/harmony-medspa",
+      "last_touched": "2026-02-06",
+      "tags": ["medspa", "booking", "expo", "nestjs"],
+      "notes": "Production medspa booking system. Expo mobile + NestJS API + React admin.",
+      "entrypoint": "npm run dev"
+    },
+    {
+      "name": "Home Hub",
+      "path": "D:/ProjectsHome/home-hub",
+      "type": "app",
+      "status": "active",
+      "primary_language": "TypeScript",
+      "github_remote": "https://github.com/lance-fisher/home-hub",
+      "last_touched": "2026-02-18",
+      "tags": ["home-automation", "network", "dashboard", "local-first"],
+      "notes": "Local-first home network dashboard. Camera feeds, LAN discovery, traffic monitoring.",
+      "entrypoint": "npm run dev"
+    },
+    {
+      "name": "Jump Quest!",
+      "path": "D:/ProjectsHome/JumpQuest",
+      "type": "app",
+      "status": "active",
+      "primary_language": "C#",
+      "github_remote": "https://github.com/lance-fisher/JumpQuest",
+      "last_touched": "2026-02-07",
+      "tags": ["game", "unity", "kids", "platformer"],
+      "notes": "3D obby platformer for kids. Unity + Three.js web version.",
+      "entrypoint": "web/index.html"
+    },
+    {
+      "name": "Lance W. Fisher (Splash Page)",
+      "path": "D:/ProjectsHome/lancewfisher-v2",
+      "type": "app",
+      "status": "active",
+      "primary_language": "HTML",
+      "github_remote": "https://github.com/lance-fisher/lancewfisher-v2",
+      "last_touched": "2026-02-18",
+      "tags": ["personal", "portfolio", "web"],
+      "notes": "Personal portfolio splash page. Dark/gold aesthetic.",
+      "entrypoint": "index.html"
+    },
+    {
+      "name": "Market Dashboard",
+      "path": "D:/ProjectsHome/market-dashboard",
+      "type": "app",
+      "status": "active",
+      "primary_language": "Python",
+      "github_remote": "https://github.com/lance-fisher/market-dashboard",
+      "last_touched": "2026-02-12",
+      "tags": ["trading", "dashboard", "crypto"],
+      "notes": "Real-time multi-market trading terminal. Candlestick charts, order book, trade tape.",
+      "entrypoint": "python server.py"
+    },
+    {
+      "name": "Master Trade Bot",
+      "path": "D:/ProjectsHome/master-trade-bot",
+      "type": "bot",
+      "status": "active",
+      "primary_language": "TypeScript",
+      "github_remote": "https://github.com/lance-fisher/master-trade-bot",
+      "last_touched": "2026-02-08",
+      "tags": ["trading", "crypto", "multi-chain"],
+      "notes": "Multi-chain trading bot. Pending consolidation with master-trading-system.",
+      "entrypoint": "npm run dev"
+    },
+    {
+      "name": "Master Trading System",
+      "path": "D:/ProjectsHome/master-trading-system",
+      "type": "bot",
+      "status": "active",
+      "primary_language": "TypeScript",
+      "github_remote": "https://github.com/lance-fisher/master-trading-system",
+      "last_touched": "2026-02-14",
+      "tags": ["trading", "crypto", "unified"],
+      "notes": "Unified trading system. Pending consolidation with master-trade-bot.",
+      "entrypoint": "npm run dev"
+    },
+    {
+      "name": "NoCo App Demos",
+      "path": "D:/ProjectsHome/noco-app-demos",
+      "type": "app",
+      "status": "active",
+      "primary_language": "HTML",
+      "github_remote": "https://github.com/lance-fisher/noco-app-demos",
+      "last_touched": "2026-02-12",
+      "tags": ["sales", "demos", "apps", "local-business"],
+      "notes": "Sales demo platform for 10 Northern Colorado businesses.",
+      "entrypoint": "index.html"
+    },
+    {
+      "name": "one-three.net",
+      "path": "D:/ProjectsHome/one-three-net",
+      "type": "app",
+      "status": "active",
+      "primary_language": "HTML",
+      "github_remote": "https://github.com/lance-fisher/one-three-net",
+      "last_touched": "2026-02-13",
+      "tags": ["personal", "portfolio", "web"],
+      "notes": "Personal portfolio hub for one-three.net domain.",
+      "entrypoint": "index.html"
+    },
+    {
+      "name": "Polymarket Sniper",
+      "path": "D:/ProjectsHome/polymarket-sniper",
+      "type": "bot",
+      "status": "paused",
+      "primary_language": "Python",
+      "github_remote": "https://github.com/lance-fisher/polymarket-sniper",
+      "last_touched": "2026-02-01",
+      "tags": ["trading", "polymarket", "sniper"],
+      "notes": "Polymarket latency sniper. Paused.",
+      "entrypoint": "python main.py"
+    },
+    {
+      "name": "Polymarket BTC 15m Assistant",
+      "path": "D:/ProjectsHome/polymarketbtc15massistant",
+      "type": "bot",
+      "status": "active",
+      "primary_language": "JavaScript",
+      "github_remote": "https://github.com/lance-fisher/polymarketbtc15massistant",
+      "last_touched": "2026-02-12",
+      "tags": ["trading", "polymarket", "crypto", "ta"],
+      "notes": "Real-time console TA assistant + copy-bot for Polymarket BTC markets.",
+      "entrypoint": "npm start"
+    },
+    {
+      "name": "Profit Desk",
+      "path": "D:/ProjectsHome/profit-desk",
+      "type": "bot",
+      "status": "active",
+      "primary_language": "Python",
+      "github_remote": "https://github.com/lance-fisher/profit-desk",
+      "last_touched": "2026-02-08",
+      "tags": ["trading", "multi-agent", "autonomous"],
+      "notes": "Multi-agent autonomous trading desk. PAPER mode by default.",
+      "entrypoint": "python run.py"
+    },
+    {
+      "name": "ProjectHub",
+      "path": "D:/ProjectsHome/project-hub",
+      "type": "app",
+      "status": "active",
+      "primary_language": "Python",
+      "github_remote": "https://github.com/lance-fisher/project-hub",
+      "last_touched": "2026-02-18",
+      "tags": ["infrastructure", "dashboard", "index"],
+      "notes": "Central project dashboard. Single pane of glass for everything.",
+      "entrypoint": "python server.py"
+    },
+    {
+      "name": "Solana Bot",
+      "path": "D:/ProjectsHome/solana-bot",
+      "type": "bot",
+      "status": "paused",
+      "primary_language": "TypeScript",
+      "github_remote": "https://github.com/lance-fisher/solana-bot",
+      "last_touched": "2026-01-18",
+      "tags": ["trading", "solana", "crypto"],
+      "notes": "Solana token sniper. Paused, functionality folded into master-trade-bot.",
+      "entrypoint": "npm run dev"
+    },
+    {
+      "name": "Tax Prep System",
+      "path": "D:/ProjectsHome/tax-prep-system",
+      "type": "app",
+      "status": "active",
+      "primary_language": "Python",
+      "github_remote": "https://github.com/lance-fisher/tax-prep-system",
+      "last_touched": "2026-01-31",
+      "tags": ["tax", "finance", "ocr"],
+      "notes": "Local-first tax document preparation system. CLI and GUI interfaces.",
+      "entrypoint": "python cli.py"
+    },
+    {
+      "name": "Trading Profit Engine",
+      "path": "D:/ProjectsHome/trading-profit-engine",
+      "type": "bot",
+      "status": "active",
+      "primary_language": "Python",
+      "github_remote": "https://github.com/lance-fisher/trading-profit-engine",
+      "last_touched": "2026-02-12",
+      "tags": ["trading", "autonomous", "orchestration"],
+      "notes": "Glue layer connecting profit-desk + master-trade-bot.",
+      "entrypoint": "python main.py"
+    },
+    {
+      "name": "Trading Shared",
+      "path": "D:/ProjectsHome/trading-shared",
+      "type": "doc",
+      "status": "active",
+      "primary_language": null,
+      "github_remote": null,
+      "last_touched": "2026-02-12",
+      "tags": ["trading", "infrastructure", "shared"],
+      "notes": "Shared knowledge base for all trading projects. Not a standalone project.",
+      "entrypoint": null
+    },
+    {
+      "name": "Bookmark Bot",
+      "path": "D:/ProjectsHome/_bookmark_bot",
+      "type": "bot",
+      "status": "active",
+      "primary_language": "Python",
+      "github_remote": null,
+      "last_touched": "2026-02-18",
+      "tags": ["automation", "ai-agent", "meta-tool"],
+      "notes": "Turns X/Twitter bookmarks into actionable project improvements.",
+      "entrypoint": "python main.py"
+    },
+    {
+      "name": "Galleon Splash",
+      "path": "D:/ProjectsHome/galleon-splash",
+      "type": "app",
+      "status": "incubating",
+      "primary_language": "HTML",
+      "github_remote": null,
+      "last_touched": "2026-02-14",
+      "tags": ["personal", "splash", "creative"],
+      "notes": "Atmospheric galleon ship splash page concept. Dark/gold aesthetic.",
+      "entrypoint": "index.html"
+    }
+  ],
+  "archived": [
+    {
+      "name": "lancewfisher-splash",
+      "path": "D:/ProjectsHome/lancewfisher-splash",
+      "reason": "Superseded by lancewfisher-v2",
+      "archived_date": "2026-02-18"
+    },
+    {
+      "name": "exo (staging repo)",
+      "path": "D:/ProjectsHome/exo",
+      "reason": "Phone project staging repo. Projects extracted to own repos.",
+      "archived_date": "2026-02-18"
+    },
+    {
+      "name": "polymarket-bots",
+      "path": "D:/ProjectsHome/polymarket-bots",
+      "reason": "Branch checkout of polymarketbtc15massistant. Use the canonical repo.",
+      "archived_date": "2026-02-18"
+    },
+    {
+      "name": "openclaw",
+      "path": "D:/ProjectsHome/openclaw",
+      "reason": "Copy of C:\\Users\\lance\\.openclaw. Paused project.",
+      "archived_date": "2026-02-18"
+    }
+  ]
+}
