@@ -3,9 +3,11 @@ Silent background launcher for the full ProjectsHome stack.
 .pyw extension = Python runs this with pythonw automatically (no console window).
 
 Boot order:
-  1. Ollama (LLM inference server — needed by OpenClaw and MoltBot)
+  1. Ollama (LLM inference server — needed by OpenClaw, Auton, MoltBot)
   2. OpenClaw Gateway (AI agent on port 18800)
   3. Hub Server (dashboard on port 8090)
+  4. Home Hub (home network dashboard on port 3210)
+  5. Auton (autonomous background worker on port 8095)
 
 Each service is idempotent — skips if already running.
 """
@@ -17,10 +19,15 @@ import shutil
 import time
 from datetime import datetime
 
-HUB_DIR = r"D:\ProjectsHome\project-hub"
+PROJECTS_ROOT = r"D:\ProjectsHome"
+HUB_DIR = os.path.join(PROJECTS_ROOT, "project-hub")
+HOME_HUB_DIR = os.path.join(PROJECTS_ROOT, "home-hub")
+AUTON_DIR = os.path.join(PROJECTS_ROOT, "auton")
 LOG_FILE = os.path.join(HUB_DIR, "hub.log")
 BOOT_LOG = os.path.join(HUB_DIR, "boot.log")
 HUB_PORT = 8090
+HOME_HUB_PORT = 3210
+AUTON_PORT = 8095
 OLLAMA_PORT = 11434
 OPENCLAW_PORT = 18800
 NO_WINDOW = subprocess.CREATE_NO_WINDOW
@@ -71,10 +78,13 @@ def start_ollama():
         return
 
     log_boot(f"Starting Ollama: {ollama_cmd}")
+    env = os.environ.copy()
+    env["OLLAMA_HOST"] = "0.0.0.0:11434"
     subprocess.Popen(
         [ollama_cmd, "serve"],
         stdout=subprocess.DEVNULL,
         stderr=subprocess.DEVNULL,
+        env=env,
         creationflags=NO_WINDOW,
     )
     if wait_for_port(OLLAMA_PORT, timeout=20):
@@ -137,8 +147,89 @@ def start_hub_server():
         log_boot("Hub server may still be loading")
 
 
+def start_home_hub():
+    """Start Home Hub (home network dashboard) on port 3210."""
+    if is_port_open(HOME_HUB_PORT):
+        log_boot(f"Home Hub already running on :{HOME_HUB_PORT}")
+        return
+
+    server_entry = os.path.join(HOME_HUB_DIR, "server", "dist", "index.js")
+    if not os.path.exists(server_entry):
+        log_boot("Home Hub server not built (server/dist/index.js missing) — skipping")
+        return
+
+    node_cmd = shutil.which("node")
+    if not node_cmd:
+        log_boot("Node.js not found — skipping Home Hub")
+        return
+
+    log_boot(f"Starting Home Hub on :{HOME_HUB_PORT}")
+    hh_log = open(os.path.join(HOME_HUB_DIR, "logs", "server.log"), "a", encoding="utf-8")
+    hh_log.write(f"\n--- Home Hub starting at {datetime.now().isoformat()} ---\n")
+    hh_log.flush()
+
+    # Ensure logs dir exists
+    os.makedirs(os.path.join(HOME_HUB_DIR, "logs"), exist_ok=True)
+
+    subprocess.Popen(
+        [node_cmd, server_entry],
+        cwd=HOME_HUB_DIR,
+        stdout=hh_log,
+        stderr=hh_log,
+        creationflags=NO_WINDOW,
+    )
+    if wait_for_port(HOME_HUB_PORT, timeout=15):
+        log_boot(f"Home Hub started on :{HOME_HUB_PORT}")
+    else:
+        log_boot("Home Hub may still be loading (didn't bind within 15s)")
+
+
+def start_auton():
+    """Start Auton (autonomous background worker) on port 8095."""
+    if is_port_open(AUTON_PORT):
+        log_boot(f"Auton already running on :{AUTON_PORT}")
+        return
+
+    run_py = os.path.join(AUTON_DIR, "run.py")
+    if not os.path.exists(run_py):
+        log_boot("Auton run.py not found — skipping")
+        return
+
+    # Find pythonw.exe for windowless execution
+    python_dir = os.path.dirname(sys.executable)
+    pythonw = os.path.join(python_dir, "pythonw.exe")
+    if not os.path.exists(pythonw):
+        pythonw = sys.executable
+
+    log_boot(f"Starting Auton on :{AUTON_PORT}")
+
+    # Ensure runtime dirs exist
+    for d in ["tasks", "tasks/proposals", "tasks/results", "tasks/backups",
+              "journal", "logs", "memory", "vault"]:
+        os.makedirs(os.path.join(AUTON_DIR, d), exist_ok=True)
+
+    stderr_log = open(os.path.join(AUTON_DIR, "logs", "stderr.log"), "a", encoding="utf-8")
+    proc = subprocess.Popen(
+        [pythonw, run_py],
+        cwd=AUTON_DIR,
+        stdout=subprocess.DEVNULL,
+        stderr=stderr_log,
+        creationflags=subprocess.DETACHED_PROCESS | NO_WINDOW,
+    )
+
+    # Write PID file
+    pid_file = os.path.join(AUTON_DIR, "auton.pid")
+    with open(pid_file, "w") as f:
+        f.write(str(proc.pid))
+
+    if wait_for_port(AUTON_PORT, timeout=10):
+        log_boot(f"Auton started on :{AUTON_PORT} (PID {proc.pid})")
+    else:
+        log_boot(f"Auton may still be loading (PID {proc.pid})")
+
+
 if __name__ == "__main__":
-    log_boot("=== Boot sequence starting ===")
+    log_boot("=== Boot sequence starting (5 services) ===")
 
     # 1. Ollama first (LLM inference — everything else depends on it)
     try:
@@ -158,4 +249,33 @@ if __name__ == "__main__":
     except Exception as e:
         log_boot(f"Hub error: {e}")
 
-    log_boot("=== Boot sequence complete ===")
+    # 4. Home Hub (home network dashboard — independent)
+    try:
+        start_home_hub()
+    except Exception as e:
+        log_boot(f"Home Hub error: {e}")
+
+    # 5. Auton (autonomous worker — needs Ollama for planning)
+    try:
+        start_auton()
+    except Exception as e:
+        log_boot(f"Auton error: {e}")
+
+    # 6. Run initial sync (moved from startup.bat)
+    try:
+        sync_script = os.path.join(HUB_DIR, "scripts", "sync-all.ps1")
+        if os.path.exists(sync_script):
+            log_boot("Running initial sync...")
+            subprocess.Popen(
+                ["powershell", "-ExecutionPolicy", "Bypass", "-File", sync_script],
+                stdout=subprocess.DEVNULL,
+                stderr=subprocess.DEVNULL,
+                creationflags=NO_WINDOW,
+            )
+            log_boot("Initial sync launched")
+        else:
+            log_boot("sync-all.ps1 not found — skipping initial sync")
+    except Exception as e:
+        log_boot(f"Sync error: {e}")
+
+    log_boot("=== Boot sequence complete (5 services + sync) ===")

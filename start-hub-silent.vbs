@@ -1,11 +1,8 @@
-' ProjectsHome Hub + OpenClaw - Silent Background Launcher
-' Starts hub server + OpenClaw gateway, then opens dashboard in Edge.
+' ProjectsHome Hub - Silent Background Launcher
+' Starts all background services (Ollama, OpenClaw, Hub, Home Hub, Auton, sync).
+' Edge will restore the dashboard tab from previous session automatically.
 ' Safe to run multiple times - checks if already running.
 Set WshShell = CreateObject("WScript.Shell")
 
-' Start hub server + OpenClaw gateway (no console window)
+' Start all background services (no console window)
 WshShell.Run "pythonw ""D:\ProjectsHome\project-hub\start-background.pyw""", 0, False
-
-' Wait for server to start, then open dashboard
-WScript.Sleep 4000
-WshShell.Run "msedge --app=http://localhost:8090", 0, False

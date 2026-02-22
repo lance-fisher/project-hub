@@ -1,6 +1,6 @@
 {
   "version": 1,
-  "updated": "2026-02-18",
+  "updated": "2026-02-21",
   "sync_interval_minutes": 5,
   "pull_strategy": "ff-only",
   "auto_stash": false,
@@ -9,8 +9,10 @@
   "log_file": "D:/ProjectsHome/project-hub/_logs/sync.log",
   "repos": [
     { "name": "auton", "path": "D:/ProjectsHome/auton", "enabled": true },
+    { "name": "bookmark-bot", "path": "D:/ProjectsHome/_bookmark_bot", "enabled": true },
     { "name": "e2ee-messenger", "path": "D:/ProjectsHome/e2ee-messenger", "enabled": true },
     { "name": "frontier-bastion", "path": "D:/ProjectsHome/frontier-bastion", "enabled": true },
+    { "name": "galleon-splash", "path": "D:/ProjectsHome/galleon-splash", "enabled": true },
     { "name": "harmony-medspa", "path": "D:/ProjectsHome/harmony-medspa", "enabled": true },
     { "name": "home-hub", "path": "D:/ProjectsHome/home-hub", "enabled": true },
     { "name": "JumpQuest", "path": "D:/ProjectsHome/JumpQuest", "enabled": true },

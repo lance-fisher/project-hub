@@ -429,7 +429,30 @@ def get_systems_overview():
         "tags": ["background-worker", "autonomous", "python"],
     })
 
-    # 8. Hub itself
+    # 8. Home Hub (Home Network Dashboard)
+    homehub_path = PROJECTS_ROOT / "home-hub"
+    homehub_online = port_check(3210)
+    homehub_detail = "Home network dashboard"
+    if homehub_online:
+        try:
+            req = urllib.request.Request("http://127.0.0.1:3210/api/health")
+            req.add_header("Accept", "application/json")
+            with urllib.request.urlopen(req, timeout=3) as resp:
+                d = json.loads(resp.read().decode("utf-8"))
+            uptime = d.get("uptime", 0)
+            homehub_detail = f"Cameras, devices, traffic | Up {int(uptime)}s"
+        except Exception:
+            homehub_detail = "Port open, health check failed"
+    systems.append({
+        "id": "home-hub", "name": "Home Hub", "icon": "🏠",
+        "status": "online" if homehub_online else ("installed" if homehub_path.exists() else "missing"),
+        "port": 3210 if homehub_online else None,
+        "url": "http://localhost:3210" if homehub_online else None,
+        "detail": homehub_detail if homehub_online else "Home network dashboard (not running)",
+        "tags": ["home-automation", "network", "dashboard"],
+    })
+
+    # 9. Hub itself
     systems.append({
         "id": "project-hub", "name": "Mission Control", "icon": "🎛️",
         "status": "online",

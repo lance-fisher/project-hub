@@ -1,7 +1,7 @@
 {
   "version": 1,
-  "updated": "2026-02-18T21:47:00Z",
-  "generated_by": "Claude Opus 4.6 (Project Consolidation Engineer)",
+  "updated": "2026-02-21T12:00:00Z",
+  "generated_by": "Claude Opus 4.6 (Workspace Cleanup)",
   "projects": [
     {
       "name": "Auton",
@@ -249,7 +249,7 @@
       "type": "bot",
       "status": "active",
       "primary_language": "Python",
-      "github_remote": null,
+      "github_remote": "https://github.com/lance-fisher/bookmark-bot",
       "last_touched": "2026-02-18",
       "tags": ["automation", "ai-agent", "meta-tool"],
       "notes": "Turns X/Twitter bookmarks into actionable project improvements.",
@@ -259,9 +259,9 @@
       "name": "Galleon Splash",
       "path": "D:/ProjectsHome/galleon-splash",
       "type": "app",
-      "status": "incubating",
+      "status": "active",
       "primary_language": "HTML",
-      "github_remote": null,
+      "github_remote": "https://github.com/lance-fisher/galleon-splash",
       "last_touched": "2026-02-14",
       "tags": ["personal", "splash", "creative"],
       "notes": "Atmospheric galleon ship splash page concept. Dark/gold aesthetic.",
@@ -271,9 +271,9 @@
   "archived": [
     {
       "name": "lancewfisher-splash",
-      "path": "D:/ProjectsHome/lancewfisher-splash",
-      "reason": "Superseded by lancewfisher-v2",
-      "archived_date": "2026-02-18"
+      "path": "D:/ProjectsHome/_archive/2026-02-21/lancewfisher-splash",
+      "reason": "Superseded by lancewfisher-v2. Moved to _archive.",
+      "archived_date": "2026-02-21"
     },
     {
       "name": "exo (staging repo)",
@@ -283,15 +283,21 @@
     },
     {
       "name": "polymarket-bots",
-      "path": "D:/ProjectsHome/polymarket-bots",
-      "reason": "Branch checkout of polymarketbtc15massistant. Use the canonical repo.",
-      "archived_date": "2026-02-18"
+      "path": "D:/ProjectsHome/_archive/2026-02-21/polymarket-bots",
+      "reason": "Duplicate clone of polymarketbtc15massistant. Moved to _archive.",
+      "archived_date": "2026-02-21"
     },
     {
       "name": "openclaw",
       "path": "D:/ProjectsHome/openclaw",
       "reason": "Copy of C:\\Users\\lance\\.openclaw. Paused project.",
       "archived_date": "2026-02-18"
+    },
+    {
+      "name": "galleon-storm",
+      "path": "D:/ProjectsHome/_archive/2026-02-21/galleon-storm",
+      "reason": "Single HTML canvas demo artifact. Moved to _archive.",
+      "archived_date": "2026-02-21"
     }
   ]
 }
