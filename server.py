@@ -13,7 +13,7 @@ import webbrowser
 from http.server import HTTPServer, SimpleHTTPRequestHandler
 from pathlib import Path
 from datetime import datetime, timezone
-from urllib.parse import parse_qs, urlparse
+from urllib.parse import parse_qs, urlparse  # noqa: F401 — kept for route parsing utility
 import urllib.request
 import urllib.error
 
@@ -355,7 +355,6 @@ def get_systems_overview():
 
     # 4. Profit Desk
     profit_desk_path = PROJECTS_ROOT / "profit-desk"
-    pd_status = "installed"
     pd_detail = "Multi-agent trading desk (6 agents)"
     pd_journal = profit_desk_path / "journal" / "journal.jsonl"
     pd_entries = 0
@@ -608,6 +607,66 @@ def auton_proxy_post(path, data=None):
         return {"error": str(e)}
 
 
+def get_activity_stream():
+    """Collect recent activity across all projects: git commits, file changes, sessions."""
+    activities = []
+    data = load_projects()
+
+    # Recent git commits across projects
+    for proj in data.get("projects", []):
+        p = proj.get("path")
+        if not p or not Path(p).is_dir():
+            continue
+        git_dir = Path(p) / ".git"
+        if not git_dir.exists():
+            continue
+        try:
+            result = subprocess.run(
+                ["git", "-C", p, "log", "--oneline", "--format=%H|%s|%aI", "-5", "--since=7 days ago"],
+                capture_output=True, text=True, timeout=5,
+                creationflags=subprocess.CREATE_NO_WINDOW,
+            )
+            if result.returncode == 0:
+                for line in result.stdout.strip().split("\n"):
+                    if not line:
+                        continue
+                    parts = line.split("|", 2)
+                    if len(parts) >= 3:
+                        activities.append({
+                            "type": "commit",
+                            "project": proj.get("name", Path(p).name),
+                            "message": parts[1],
+                            "timestamp": parts[2],
+                        })
+        except Exception:
+            pass
+
+    # Recent sessions from history
+    sessions = load_session_history()
+    for s in sessions[:10]:
+        activities.append({
+            "type": "session",
+            "project": s.get("project", "").replace("\\", "/").split("/")[-1] or "unknown",
+            "message": (s.get("firstMessage") or "(session)")[:80],
+            "timestamp": s.get("lastTimestamp") or s.get("timestamp", ""),
+        })
+
+    # Sort by timestamp descending
+    def parse_ts(a):
+        ts = a.get("timestamp", "")
+        if not ts:
+            return datetime.min.replace(tzinfo=timezone.utc)
+        try:
+            if isinstance(ts, (int, float)):
+                return datetime.fromtimestamp(ts / 1000 if ts > 1e12 else ts, tz=timezone.utc)
+            return datetime.fromisoformat(ts.replace("Z", "+00:00"))
+        except Exception:
+            return datetime.min.replace(tzinfo=timezone.utc)
+
+    activities.sort(key=parse_ts, reverse=True)
+    return {"activities": activities[:30]}
+
+
 class DashboardHandler(SimpleHTTPRequestHandler):
     def log_message(self, format, *args):
         if args and isinstance(args[0], str) and "/api/" in args[0]:
@@ -658,6 +717,8 @@ class DashboardHandler(SimpleHTTPRequestHandler):
             self.send_json(auton_proxy_get("/api/knowledge"))
         elif self.path == "/api/auton/journal":
             self.send_json(auton_proxy_get("/api/journal?n=20"))
+        elif self.path == "/api/activity-stream":
+            self.send_json(get_activity_stream())
         else:
             self.send_error(404)
 
@@ -861,7 +922,7 @@ class DashboardHandler(SimpleHTTPRequestHandler):
         response = json.dumps(data, ensure_ascii=False).encode("utf-8")
         self.send_response(code)
         self.send_header("Content-Type", "application/json")
-        self.send_header("Content-Length", len(response))
+        self.send_header("Content-Length", str(len(response)))
         self.send_header("Access-Control-Allow-Origin", "*")
         self.end_headers()
         self.wfile.write(response)
@@ -871,7 +932,7 @@ class DashboardHandler(SimpleHTTPRequestHandler):
         encoded = html.encode("utf-8")
         self.send_response(200)
         self.send_header("Content-Type", "text/html; charset=utf-8")
-        self.send_header("Content-Length", len(encoded))
+        self.send_header("Content-Length", str(len(encoded)))
         self.end_headers()
         self.wfile.write(encoded)
 
@@ -924,6 +985,7 @@ def get_dashboard_html():
   .header-left { display: flex; align-items: center; gap: 16px; }
   .logo { font-family: var(--font-mono); font-size: 22px; font-weight: 700; color: var(--accent-cyan); letter-spacing: -0.5px; }
   .logo span { color: var(--text-muted); font-weight: 400; }
+  .logo-tagline { font-family: var(--font-sans); font-size: 10px; color: var(--text-muted); letter-spacing: 1.5px; text-transform: uppercase; margin-top: 2px; }
   .header-stats { display: flex; gap: 20px; font-family: var(--font-mono); font-size: 12px; color: var(--text-muted); }
   .header-stats .stat-val { color: var(--text-secondary); font-weight: 600; }
   .header-actions { display: flex; gap: 8px; }
@@ -1140,14 +1202,48 @@ def get_dashboard_html():
   .openclaw-actions { display: flex; gap: 6px; }
   .openclaw-response { margin-top: 10px; font-family: var(--font-mono); font-size: 11px; padding: 12px 14px; background: var(--bg-deep); border: 1px solid var(--border); border-radius: var(--radius); display: none; max-height: 250px; overflow-y: auto; white-space: pre-wrap; word-break: break-word; line-height: 1.6; color: var(--text-secondary); }
   .openclaw-response.visible { display: block; animation: fadeIn 0.15s ease; }
-  @media (max-width: 768px) { .app { padding: 16px; } .header { flex-direction: column; gap: 12px; align-items: flex-start; } .projects-grid { grid-template-columns: 1fr; } .session-item { grid-template-columns: 80px 1fr auto; } .session-project { display: none; } .command-hint { display: none; } .tasks-panel .task-item { grid-template-columns: 50px 1fr auto; } .task-project, .task-id { display: none; } .openclaw-grid { grid-template-columns: 1fr; } }
+  /* --- Ecosystem Status Bar --- */
+  .ecosystem-bar { display: flex; gap: 8px; flex-wrap: wrap; padding: 10px 16px; background: var(--bg-card); border: 1px solid var(--border); border-radius: var(--radius-lg); margin-bottom: 16px; align-items: center; }
+  .eco-pill { display: flex; align-items: center; gap: 6px; font-family: var(--font-mono); font-size: 11px; color: var(--text-secondary); padding: 4px 10px; background: var(--bg-deep); border-radius: 20px; border: 1px solid var(--border); transition: all 0.15s; cursor: default; }
+  .eco-pill:hover { border-color: var(--border-hover); background: var(--bg-card-hover); }
+  .eco-dot { width: 6px; height: 6px; border-radius: 50%; flex-shrink: 0; }
+  .eco-dot.online { background: var(--accent-green); box-shadow: 0 0 6px var(--accent-green); }
+  .eco-dot.offline { background: var(--accent-red); }
+  .eco-port { font-size: 9px; color: var(--text-muted); }
+  .eco-label { font-weight: 500; }
+  /* --- Activity Stream --- */
+  .activity-panel { background: var(--bg-card); border: 1px solid var(--border); border-radius: var(--radius-lg); padding: 20px; margin-bottom: 20px; }
+  .activity-panel-header { display: flex; align-items: center; justify-content: space-between; margin-bottom: 14px; }
+  .activity-panel-title { font-family: var(--font-mono); font-size: 15px; font-weight: 600; color: var(--text-primary); display: flex; align-items: center; gap: 8px; }
+  .activity-stream { display: flex; flex-direction: column; gap: 6px; max-height: 280px; overflow-y: auto; }
+  .activity-item { display: flex; align-items: flex-start; gap: 10px; padding: 8px 12px; background: var(--bg-deep); border-radius: var(--radius); font-family: var(--font-mono); font-size: 11px; line-height: 1.5; transition: background 0.15s; }
+  .activity-item:hover { background: var(--bg-card-hover); }
+  .activity-icon { font-size: 14px; flex-shrink: 0; margin-top: 1px; }
+  .activity-content { flex: 1; min-width: 0; }
+  .activity-project { color: var(--accent-cyan); font-weight: 600; }
+  .activity-text { color: var(--text-secondary); }
+  .activity-time { color: var(--text-muted); font-size: 10px; flex-shrink: 0; white-space: nowrap; }
+  /* --- Help Tooltips --- */
+  .help-tip { position: relative; cursor: help; border-bottom: 1px dotted var(--text-muted); }
+  .help-tip::after { content: attr(data-tip); position: absolute; bottom: calc(100% + 8px); left: 50%; transform: translateX(-50%); background: var(--bg-card); color: var(--text-secondary); font-family: var(--font-sans); font-size: 11px; font-weight: 400; padding: 8px 12px; border-radius: var(--radius); border: 1px solid var(--border); white-space: nowrap; opacity: 0; pointer-events: none; transition: opacity 0.15s; z-index: 100; box-shadow: var(--shadow); max-width: 300px; white-space: normal; }
+  .help-tip::before { content: ''; position: absolute; bottom: calc(100% + 2px); left: 50%; transform: translateX(-50%); border: 6px solid transparent; border-top-color: var(--border); opacity: 0; pointer-events: none; transition: opacity 0.15s; z-index: 101; }
+  .help-tip:hover::after, .help-tip:hover::before { opacity: 1; }
+  /* --- Pillar Headers --- */
+  .pillar-header { padding: 12px 16px; margin-bottom: 8px; }
+  .pillar-name { font-family: var(--font-mono); font-size: 14px; font-weight: 600; color: var(--text-primary); display: flex; align-items: center; gap: 8px; }
+  .pillar-desc { font-size: 12px; color: var(--text-muted); margin-top: 4px; }
+  .pillar-icon { font-size: 16px; }
+  @media (max-width: 768px) { .app { padding: 16px; } .header { flex-direction: column; gap: 12px; align-items: flex-start; } .projects-grid { grid-template-columns: 1fr; } .session-item { grid-template-columns: 80px 1fr auto; } .session-project { display: none; } .command-hint { display: none; } .tasks-panel .task-item { grid-template-columns: 50px 1fr auto; } .task-project, .task-id { display: none; } .openclaw-grid { grid-template-columns: 1fr; } .ecosystem-bar { gap: 4px; padding: 8px; } .eco-pill { font-size: 10px; padding: 3px 7px; } }
 </style>
 </head>
 <body>
 <div class="app" id="app">
   <header class="header">
     <div class="header-left">
-      <div class="logo">ProjectsHome<span> /hub</span></div>
+      <div>
+        <div class="logo">Fisher Sovereign<span> /hub</span></div>
+        <div class="logo-tagline">Building the Architecture for Independence</div>
+      </div>
       <div class="header-stats" id="headerStats"></div>
     </div>
     <div class="header-actions">
@@ -1158,6 +1254,11 @@ def get_dashboard_html():
       <button class="btn btn-accent" onclick="openAddModal()">+ Add Project</button>
     </div>
   </header>
+  <!-- Ecosystem Status Bar -->
+  <div class="ecosystem-bar" id="ecosystemBar">
+    <span style="font-family:var(--font-mono);font-size:10px;color:var(--text-muted);text-transform:uppercase;letter-spacing:0.5px;margin-right:4px">Ecosystem</span>
+  </div>
+
   <div class="command-bar">
     <div style="display:flex;gap:8px;align-items:stretch;">
       <div class="target-toggle" id="targetToggle">
@@ -1177,7 +1278,7 @@ def get_dashboard_html():
   <!-- Systems Status Panel -->
   <div class="systems-panel" id="systemsPanel">
     <div class="systems-panel-header">
-      <div class="systems-panel-title">&#127918; Systems Status <span class="sys-count" id="sysCount"></span></div>
+      <div class="systems-panel-title"><span class="help-tip" data-tip="Live health monitoring of all background services: Ollama, OpenClaw, Auton, Home Hub, Git Sync, and more. Green = online, Red = offline.">&#127918; Systems Status</span> <span class="sys-count" id="sysCount"></span></div>
       <button class="btn btn-sm" onclick="loadSystems()" title="Refresh">&#x27F3; Refresh</button>
     </div>
     <div class="systems-grid" id="systemsGrid">
@@ -1196,7 +1297,7 @@ def get_dashboard_html():
     <div class="openclaw-header">
       <div class="openclaw-title">
         <span class="claw-icon">&#129438;</span>
-        OpenClaw Agent
+        <span class="help-tip" data-tip="OpenClaw is your local AI agent gateway. Send tasks, chat via Telegram, queue overnight work. Runs on Ollama with qwen2.5 models.">OpenClaw Agent</span>
         <span class="claw-version" id="clawVersion"></span>
       </div>
       <div class="openclaw-status-badge offline" id="clawStatusBadge">
@@ -1246,7 +1347,7 @@ def get_dashboard_html():
     <div class="openclaw-header">
       <div class="openclaw-title">
         <span class="claw-icon">&#9881;</span>
-        Auton
+        <span class="help-tip" data-tip="Autonomous background worker that scans all projects, proposes improvements, and executes approved tasks. Runs in DRY_RUN by default. Kill switch available.">Auton</span>
         <span class="claw-version" id="autonMode"></span>
       </div>
       <div class="openclaw-status-badge offline" id="autonStatusBadge">
@@ -1285,6 +1386,15 @@ def get_dashboard_html():
     </div>
   </div>
 
+  <!-- Cross-Project Activity Stream -->
+  <div class="activity-panel" id="activityPanel" style="display:none">
+    <div class="activity-panel-header">
+      <div class="activity-panel-title"><span class="help-tip" data-tip="Unified timeline of recent changes across all projects: git commits, file modifications, and session activity">&#9889; Activity Stream</span></div>
+      <button class="btn btn-sm" onclick="loadActivityStream()" title="Refresh activity">&#x27F3; Refresh</button>
+    </div>
+    <div class="activity-stream" id="activityStream"></div>
+  </div>
+
   <div class="toolbar">
     <div class="search-wrap">
       <input type="text" class="search-box" id="searchBox" placeholder="Search projects... (press /)" oninput="renderProjects()">
@@ -1293,6 +1403,7 @@ def get_dashboard_html():
       <button class="filter-tab active" onclick="setFilter('all', this)">All</button>
       <button class="filter-tab" onclick="setFilter('active', this)">Active</button>
       <button class="filter-tab" onclick="setFilter('pinned', this)">Pinned</button>
+      <button class="filter-tab" onclick="setFilter('pillars', this)">&#127919; Pillars</button>
       <button class="filter-tab" onclick="setFilter('computer', this)">&#128187; PC</button>
       <button class="filter-tab" onclick="setFilter('ios', this)">&#128241; iOS</button>
       <button class="filter-tab" onclick="setFilter('concept', this)">&#128173; Ideas</button>
@@ -1316,11 +1427,84 @@ def get_dashboard_html():
 <div id="toastRoot"></div>
 <script>
 let projects=[], sessions=[], currentFilter='all', currentView='grid', commandTarget='bot';
+const PILLARS=[
+  {id:'privacy',name:'Privacy Infrastructure',icon:'&#128274;',desc:'Secure communication and data sovereignty',keys:['e2ee','home-hub','openclaw']},
+  {id:'financial',name:'Financial Sovereignty',icon:'&#128176;',desc:'Trading systems and market intelligence',keys:['trading','profit','trade','market','polymarket','solana']},
+  {id:'local-ai',name:'Local AI',icon:'&#129302;',desc:'On-device intelligence and autonomous agents',keys:['auton','openclaw','moltbot','ollama','boss']},
+  {id:'web',name:'Web Presence',icon:'&#127760;',desc:'Portfolio sites and digital identity',keys:['lancewfisher','one-three','galleon','fishersovereign','noco']},
+  {id:'creative',name:'Creative Projects',icon:'&#127912;',desc:'Games, apps, and creative ventures',keys:['jumpquest','frontier','harmony','jump']},
+  {id:'infra',name:'Build Infrastructure',icon:'&#9881;',desc:'Project management, automation, and tooling',keys:['project-hub','bookmark','tax','shared','hub']}
+];
+function getPillarForProject(p){
+  const name=((p.name||'')+(p.path||'')+(p.description||'')).toLowerCase().replace(/[\s_-]/g,'');
+  for(const pil of PILLARS){if(pil.keys.some(k=>name.includes(k)))return pil;}
+  return PILLARS[PILLARS.length-1];
+}
+function renderPillarView(grid,filtered){
+  grid.style.display='block';
+  grid.textContent='';
+  PILLARS.forEach(function(pil){
+    const pilProjects=filtered.filter(function(p){return getPillarForProject(p).id===pil.id;});
+    if(!pilProjects.length)return;
+    const header=document.createElement('div');
+    header.className='pillar-header';
+    header.style.gridColumn='1/-1';
+    const nameEl=document.createElement('div');
+    nameEl.className='pillar-name';
+    const iconSpan=document.createElement('span');
+    iconSpan.className='pillar-icon';
+    iconSpan.textContent=({'privacy':'\u{1F512}','financial':'\u{1F4B0}','local-ai':'\u{1F916}','web':'\u{1F310}','creative':'\u{1F3A8}','infra':'\u2699'})[pil.id]||'\u2699';
+    nameEl.appendChild(iconSpan);
+    nameEl.appendChild(document.createTextNode(' '+pil.name+' ('+pilProjects.length+')'));
+    header.appendChild(nameEl);
+    const desc=document.createElement('div');
+    desc.className='pillar-desc';
+    desc.textContent=pil.desc;
+    header.appendChild(desc);
+    grid.appendChild(header);
+    const subgrid=document.createElement('div');
+    subgrid.className='projects-grid';
+    subgrid.style.marginBottom='16px';
+    pilProjects.forEach(function(p,fi){
+      const card=document.createElement('div');
+      card.className='project-card'+(p.pinned?' pinned':'');
+      card.style.animationDelay=(fi*0.04)+'s';
+      const sc='status-'+((p.status||'unknown').replace(/\s+/g,'_'));
+      const sl=(p.status||'unknown').replace(/_/g,' ');
+      const nameRow=document.createElement('div');
+      nameRow.className='card-header';
+      const titleRow=document.createElement('div');
+      titleRow.className='card-title-row';
+      if(p.pinned){const pin=document.createElement('span');pin.className='pin-indicator';pin.textContent='\u2733';titleRow.appendChild(pin);}
+      const title=document.createElement('span');
+      title.className='card-title';
+      title.textContent=p.name;
+      titleRow.appendChild(title);
+      nameRow.appendChild(titleRow);
+      card.appendChild(nameRow);
+      if(p.description){const dsc=document.createElement('div');dsc.className='card-desc';dsc.textContent=p.description;card.appendChild(dsc);}
+      const meta=document.createElement('div');
+      meta.className='card-meta';
+      const dot=document.createElement('span');
+      dot.className='status-dot '+sc;
+      meta.appendChild(dot);
+      const stLabel=document.createElement('span');
+      stLabel.style.cssText='font-family:var(--font-mono);font-size:11px;color:var(--text-muted)';
+      stLabel.textContent=sl;
+      meta.appendChild(stLabel);
+      card.appendChild(meta);
+      if(p.path){const pathDiv=document.createElement('div');pathDiv.className='card-path';const code=document.createElement('code');code.textContent=p.path;pathDiv.appendChild(code);card.appendChild(pathDiv);}
+      subgrid.appendChild(card);
+    });
+    grid.appendChild(subgrid);
+  });
+  grid.style.display='block';
+}
 async function init(){await Promise.all([loadProjects(),loadSessions(),loadStats()]);renderProjects();renderSessions();checkBotHealth();loadBotTasks();setInterval(checkBotHealth,30000);setInterval(loadBotTasks,15000);}
 async function loadProjects(){try{const r=await fetch('/api/projects');const d=await r.json();projects=d.projects||[];}catch(e){projects=[];}}
 async function loadSessions(){try{const r=await fetch('/api/sessions');sessions=await r.json();}catch(e){sessions=[];}}
 async function loadStats(){try{const r=await fetch('/api/stats');const s=await r.json();document.getElementById('headerStats').innerHTML=`<span><span class="stat-val">${s.totalProjects}</span> projects</span><span><span class="stat-val">${s.activeProjects}</span> active</span><span><span class="stat-val">${s.totalSessions}</span> sessions</span><span><span class="stat-val">${s.totalMessages}</span> messages</span>`;}catch(e){}}
-function renderProjects(){const grid=document.getElementById('projectsGrid');const query=document.getElementById('searchBox').value.toLowerCase();let filtered=projects.filter((p,i)=>{p._index=i;const text=`${p.name} ${p.description||''} ${p.path||''} ${p.tech||''} ${(p.tags||[]).join(' ')}`.toLowerCase();if(query&&!text.includes(query))return false;if(currentFilter==='all')return true;if(currentFilter==='active')return p.status==='active'||p.status==='in_progress';if(currentFilter==='pinned')return p.pinned;if(currentFilter==='computer')return p.source==='computer'||p.source==='local'||p.source==='auto-detected';if(currentFilter==='ios')return p.source==='ios';if(currentFilter==='concept')return p.status==='concept';return true;});filtered.sort((a,b)=>{if(a.pinned&&!b.pinned)return -1;if(!a.pinned&&b.pinned)return 1;return new Date(b.last_active||0)-new Date(a.last_active||0);});if(!filtered.length){grid.innerHTML='<div class="empty-state"><div class="big">&empty;</div>No projects found.</div>';return;}grid.className=`projects-grid ${currentView==='list'?'list-view':''}`;grid.innerHTML=filtered.map((p,fi)=>{const sc=`status-${(p.status||'unknown').replace(/\s+/g,'_')}`;const sl=(p.status||'unknown').replace(/_/g,' ');const src=p.source==='ios'?'&#128241; iOS':p.source==='computer'?'&#128187; PC':p.source||'manual';const srcC=`badge-source-${(p.source||'manual').replace(/\s+/g,'-')}`;const techs=(p.tech||'').split(',').map(t=>t.trim()).filter(Boolean);const tags=p.tags||[];const la=p.last_active?timeAgo(p.last_active):'';return`<div class="project-card ${p.pinned?'pinned':''}" style="animation-delay:${fi*0.04}s"><div class="card-header"><div class="card-title-row">${p.pinned?'<span class="pin-indicator">&#9733;</span>':''}<span class="card-title">${esc(p.name)}</span></div><div class="card-actions"><button class="btn-icon" onclick="togglePin(${p._index})">${p.pinned?'&#9733;':'&#9734;'}</button><button class="btn-icon" onclick="openEditModal(${p._index})">&#9998;</button><button class="btn-icon btn-danger" onclick="deleteProject(${p._index})">&#10005;</button></div></div>${p.description?`<div class="card-desc">${esc(p.description)}</div>`:''}<div class="card-meta"><span class="status-dot ${sc}"></span><span style="font-family:var(--font-mono);font-size:11px;color:var(--text-muted)">${esc(sl)}</span><span class="badge ${srcC}">${src}</span>${techs.map(t=>`<span class="badge badge-tech">${esc(t)}</span>`).join('')}${tags.map(t=>`<span class="tag">${esc(t)}</span>`).join('')}${la?`<span class="card-timestamp">${la}</span>`:''}</div>${p.path?`<div class="card-path"><code>${esc(p.path)}</code><button class="copy-btn" onclick="event.stopPropagation();copyText('${escAttr(p.path)}')" title="Copy path">&#128203;</button></div>`:''}<div class="card-footer">${p.path?`<button class="btn btn-sm" onclick="event.stopPropagation();openTerminal('${escAttr(p.path)}')">&#9654; Terminal</button><button class="btn btn-sm" onclick="event.stopPropagation();openExplorer('${escAttr(p.path)}')">&#128193; Explorer</button><button class="btn btn-sm" onclick="event.stopPropagation();copyText('cd ${escAttr(p.path)} && claude')">&#8984; Claude</button><button class="btn btn-sm btn-bot" onclick="event.stopPropagation();openDispatchModal('${escAttr(p.name)}','${escAttr(p.path)}')">&#9881; Bot</button>`:''}</div></div>`;}).join('');}
+function renderProjects(){const grid=document.getElementById('projectsGrid');const query=document.getElementById('searchBox').value.toLowerCase();let filtered=projects.filter((p,i)=>{p._index=i;const text=`${p.name} ${p.description||''} ${p.path||''} ${p.tech||''} ${(p.tags||[]).join(' ')}`.toLowerCase();if(query&&!text.includes(query))return false;if(currentFilter==='all')return true;if(currentFilter==='active')return p.status==='active'||p.status==='in_progress';if(currentFilter==='pinned')return p.pinned;if(currentFilter==='computer')return p.source==='computer'||p.source==='local'||p.source==='auto-detected';if(currentFilter==='ios')return p.source==='ios';if(currentFilter==='concept')return p.status==='concept';if(currentFilter==='pillars')return true;return true;});filtered.sort((a,b)=>{if(a.pinned&&!b.pinned)return -1;if(!a.pinned&&b.pinned)return 1;return new Date(b.last_active||0)-new Date(a.last_active||0);});if(!filtered.length){grid.innerHTML='<div class="empty-state"><div class="big">&empty;</div>No projects found.</div>';return;}grid.className=`projects-grid ${currentView==='list'?'list-view':''}`;if(currentFilter==='pillars'){renderPillarView(grid,filtered);return;}grid.innerHTML=filtered.map((p,fi)=>{const sc=`status-${(p.status||'unknown').replace(/\s+/g,'_')}`;const sl=(p.status||'unknown').replace(/_/g,' ');const src=p.source==='ios'?'&#128241; iOS':p.source==='computer'?'&#128187; PC':p.source||'manual';const srcC=`badge-source-${(p.source||'manual').replace(/\s+/g,'-')}`;const techs=(p.tech||'').split(',').map(t=>t.trim()).filter(Boolean);const tags=p.tags||[];const la=p.last_active?timeAgo(p.last_active):'';return`<div class="project-card ${p.pinned?'pinned':''}" style="animation-delay:${fi*0.04}s"><div class="card-header"><div class="card-title-row">${p.pinned?'<span class="pin-indicator">&#9733;</span>':''}<span class="card-title">${esc(p.name)}</span></div><div class="card-actions"><button class="btn-icon" onclick="togglePin(${p._index})">${p.pinned?'&#9733;':'&#9734;'}</button><button class="btn-icon" onclick="openEditModal(${p._index})">&#9998;</button><button class="btn-icon btn-danger" onclick="deleteProject(${p._index})">&#10005;</button></div></div>${p.description?`<div class="card-desc">${esc(p.description)}</div>`:''}<div class="card-meta"><span class="status-dot ${sc}"></span><span style="font-family:var(--font-mono);font-size:11px;color:var(--text-muted)">${esc(sl)}</span><span class="badge ${srcC}">${src}</span>${techs.map(t=>`<span class="badge badge-tech">${esc(t)}</span>`).join('')}${tags.map(t=>`<span class="tag">${esc(t)}</span>`).join('')}${la?`<span class="card-timestamp">${la}</span>`:''}</div>${p.path?`<div class="card-path"><code>${esc(p.path)}</code><button class="copy-btn" onclick="event.stopPropagation();copyText('${escAttr(p.path)}')" title="Copy path">&#128203;</button></div>`:''}<div class="card-footer">${p.path?`<button class="btn btn-sm" onclick="event.stopPropagation();openTerminal('${escAttr(p.path)}')">&#9654; Terminal</button><button class="btn btn-sm" onclick="event.stopPropagation();openExplorer('${escAttr(p.path)}')">&#128193; Explorer</button><button class="btn btn-sm" onclick="event.stopPropagation();copyText('cd ${escAttr(p.path)} && claude')">&#8984; Claude</button><button class="btn btn-sm btn-bot" onclick="event.stopPropagation();openDispatchModal('${escAttr(p.name)}','${escAttr(p.path)}')">&#9881; Bot</button>`:''}</div></div>`;}).join('');}
 function renderSessions(){const panel=document.getElementById('sessionsPanel');const list=document.getElementById('sessionList');if(!sessions.length){panel.style.display='none';return;}panel.style.display='block';document.getElementById('sessionCount').textContent=sessions.length+' sessions';list.innerHTML=sessions.slice(0,30).map(s=>`<div class="session-item"><span class="session-date">${esc(s.lastDate)}</span><span class="session-msg" title="${esc(s.firstMessage)}">${esc(s.firstMessage||'(no message)')}</span><span class="session-count">${s.messageCount} msg${s.messageCount>1?'s':''}</span><span class="session-project">${esc(s.project.split('\\\\').pop()||s.project)}</span></div>`).join('');}
 async function togglePin(i){await fetch('/api/projects/update',{method:'POST',body:JSON.stringify({index:i,fields:{pinned:!projects[i].pinned}})});projects[i].pinned=!projects[i].pinned;renderProjects();}
 async function deleteProject(i){const p=projects[i];if(!confirm(`Remove "${p.name}" from dashboard?\n(Files on disk are NOT deleted.)`))return;await fetch('/api/projects/delete',{method:'POST',body:JSON.stringify({index:i})});projects.splice(i,1);loadStats();renderProjects();toast('Removed '+p.name);}
@@ -1530,18 +1714,55 @@ async function loadSystems(){
     const grid=document.getElementById('systemsGrid');
     const onlineCount=systems.filter(s=>s.status==='online').length;
     document.getElementById('sysCount').textContent=onlineCount+'/'+systems.length+' online';
-    grid.innerHTML=systems.map(s=>{
-      const portHtml=s.port?(s.url?'<a href="'+s.url+'" target="_blank">:'+s.port+'</a>':':'+s.port):'';
-      return'<div class="sys-card '+s.status+'">'
-        +'<div class="sys-icon">'+s.icon+'</div>'
-        +'<div class="sys-info">'
-          +'<div class="sys-name"><span class="sys-status-dot '+s.status+'"></span>'+esc(s.name)+'</div>'
-          +'<div class="sys-detail">'+esc(s.detail)+'</div>'
-          +'<div class="sys-tags">'+s.tags.map(t=>'<span class="sys-tag">'+esc(t)+'</span>').join('')+'</div>'
-        +'</div>'
-        +(portHtml?'<div class="sys-port">'+portHtml+'</div>':'')
-      +'</div>';
-    }).join('');
+    renderEcosystemBar(systems);
+    // Systems grid uses trusted server data (icon/name/detail from get_systems_overview)
+    grid.textContent='';
+    systems.forEach(function(s){
+      const card=document.createElement('div');
+      card.className='sys-card '+s.status;
+      const iconDiv=document.createElement('div');
+      iconDiv.className='sys-icon';
+      iconDiv.textContent=s.icon;
+      card.appendChild(iconDiv);
+      const info=document.createElement('div');
+      info.className='sys-info';
+      const nameDiv=document.createElement('div');
+      nameDiv.className='sys-name';
+      const dot=document.createElement('span');
+      dot.className='sys-status-dot '+s.status;
+      nameDiv.appendChild(dot);
+      nameDiv.appendChild(document.createTextNode(s.name));
+      info.appendChild(nameDiv);
+      const detail=document.createElement('div');
+      detail.className='sys-detail';
+      detail.textContent=s.detail;
+      info.appendChild(detail);
+      const tags=document.createElement('div');
+      tags.className='sys-tags';
+      (s.tags||[]).forEach(function(t){
+        const tag=document.createElement('span');
+        tag.className='sys-tag';
+        tag.textContent=t;
+        tags.appendChild(tag);
+      });
+      info.appendChild(tags);
+      card.appendChild(info);
+      if(s.port){
+        const portDiv=document.createElement('div');
+        portDiv.className='sys-port';
+        if(s.url){
+          const a=document.createElement('a');
+          a.href=s.url;
+          a.target='_blank';
+          a.textContent=':'+s.port;
+          portDiv.appendChild(a);
+        }else{
+          portDiv.textContent=':'+s.port;
+        }
+        card.appendChild(portDiv);
+      }
+      grid.appendChild(card);
+    });
   }catch(e){
     document.getElementById('systemsGrid').innerHTML='<div style="color:var(--accent-red);font-family:var(--font-mono);font-size:12px">Error loading systems</div>';
   }
@@ -1683,6 +1904,82 @@ document.getElementById('clawInput').addEventListener('keydown',function(e){
     if(e.shiftKey){addOvernightTask();}else{sendToOpenClaw();}
   }
 });
+function renderEcosystemBar(systems){
+  const bar=document.getElementById('ecosystemBar');
+  if(!systems||!systems.length)return;
+  const services=[
+    {name:'Ollama',key:'Ollama',port:11434},
+    {name:'OpenClaw',key:'OpenClaw',port:18800},
+    {name:'Project Hub',key:'Project Hub',port:8090},
+    {name:'Home Hub',key:'Home Hub',port:3210},
+    {name:'Auton',key:'Auton',port:8095},
+    {name:'Git Sync',key:'Git Sync',port:null}
+  ];
+  // All values here are from trusted server data (systems API), not user input
+  bar.textContent='';
+  const label=document.createElement('span');
+  label.style.cssText='font-family:var(--font-mono);font-size:10px;color:var(--text-muted);text-transform:uppercase;letter-spacing:0.5px;margin-right:4px';
+  label.textContent='Ecosystem';
+  bar.appendChild(label);
+  services.forEach(function(svc){
+    const sys=systems.find(function(s){return s.name.toLowerCase().includes(svc.key.toLowerCase());});
+    const online=sys&&sys.status==='online';
+    const pill=document.createElement('div');
+    pill.className='eco-pill';
+    pill.title=(online?'Online':'Offline')+(svc.port?' on port '+svc.port:'');
+    const dot=document.createElement('span');
+    dot.className='eco-dot '+(online?'online':'offline');
+    pill.appendChild(dot);
+    const lbl=document.createElement('span');
+    lbl.className='eco-label';
+    lbl.textContent=svc.name;
+    pill.appendChild(lbl);
+    if(svc.port){
+      const pt=document.createElement('span');
+      pt.className='eco-port';
+      pt.textContent=':'+svc.port;
+      pill.appendChild(pt);
+    }
+    bar.appendChild(pill);
+  });
+}
+async function loadActivityStream(){
+  try{
+    const r=await fetch('/api/activity-stream');
+    const d=await r.json();
+    const panel=document.getElementById('activityPanel');
+    const stream=document.getElementById('activityStream');
+    if(!d.activities||!d.activities.length){panel.style.display='none';return;}
+    panel.style.display='block';
+    // Activity data comes from trusted local server APIs
+    stream.textContent='';
+    const icons={'commit':'\u{1F4DD}','session':'\u{1F4BB}','file':'\u{1F4C4}','system':'\u2699'};
+    d.activities.slice(0,20).forEach(function(a){
+      const item=document.createElement('div');
+      item.className='activity-item';
+      const ico=document.createElement('span');
+      ico.className='activity-icon';
+      ico.textContent=icons[a.type]||'\u25CF';
+      item.appendChild(ico);
+      const content=document.createElement('div');
+      content.className='activity-content';
+      const proj=document.createElement('span');
+      proj.className='activity-project';
+      proj.textContent=a.project;
+      content.appendChild(proj);
+      const txt=document.createElement('span');
+      txt.className='activity-text';
+      txt.textContent=' '+a.message;
+      content.appendChild(txt);
+      item.appendChild(content);
+      const time=document.createElement('span');
+      time.className='activity-time';
+      time.textContent=timeAgo(a.timestamp);
+      item.appendChild(time);
+      stream.appendChild(item);
+    });
+  }catch(e){document.getElementById('activityPanel').style.display='none';}
+}
 init();
 setupCommandBar();
 loadSystems();
@@ -1690,11 +1987,13 @@ loadActiveSessions();
 checkClawHealth();
 loadClawActivity();
 checkAutonHealth();
+loadActivityStream();
 setInterval(loadSystems,30000);
 setInterval(loadActiveSessions,60000);
 setInterval(checkClawHealth,30000);
 setInterval(loadClawActivity,60000);
 setInterval(checkAutonHealth,15000);
+setInterval(loadActivityStream,60000);
 
 // --- Auton Background Worker Integration ---
 let autonOnline=false;
