@@ -8,6 +8,7 @@ Boot order:
   3. Hub Server (dashboard on port 8090)
   4. Home Hub (home network dashboard on port 3210)
   5. Auton (autonomous background worker on port 8095)
+  6. Open WebUI (The Boss chat frontend on port 3000)
 
 Each service is idempotent — skips if already running.
 """
@@ -30,6 +31,8 @@ HOME_HUB_PORT = 3210
 AUTON_PORT = 8095
 OLLAMA_PORT = 11434
 OPENCLAW_PORT = 18800
+OPEN_WEBUI_PORT = 3000
+BOSS_ROOT = os.path.join(PROJECTS_ROOT, ".governance", "the-boss")
 NO_WINDOW = subprocess.CREATE_NO_WINDOW
 
 
@@ -114,10 +117,14 @@ def start_openclaw_gateway():
     gw_log.write(f"\n--- Gateway starting at {datetime.now().isoformat()} ---\n")
     gw_log.flush()
 
+    env = os.environ.copy()
+    env["OPENCLAW_DISABLE_BONJOUR"] = "1"  # Prevent 15s arp -a polling (console window flash)
+
     subprocess.Popen(
         [openclaw_cmd, "gateway", "run", "--port", str(OPENCLAW_PORT), "--bind", "loopback"],
         stdout=gw_log,
         stderr=gw_log,
+        env=env,
         creationflags=NO_WINDOW,
     )
     if wait_for_port(OPENCLAW_PORT, timeout=15):
@@ -229,7 +236,7 @@ def start_auton():
 
 
 if __name__ == "__main__":
-    log_boot("=== Boot sequence starting (5 services) ===")
+    log_boot("=== Boot sequence starting (6 services) ===")
 
     # 1. Ollama first (LLM inference — everything else depends on it)
     try:
@@ -261,7 +268,40 @@ if __name__ == "__main__":
     except Exception as e:
         log_boot(f"Auton error: {e}")
 
-    # 6. Run initial sync (moved from startup.bat)
+    # 6. Open WebUI (The Boss chat frontend — needs Ollama)
+    try:
+        if is_port_open(OPEN_WEBUI_PORT):
+            log_boot("Open WebUI already running on :3000")
+        else:
+            open_webui_exe = os.path.join(BOSS_ROOT, "venv", "Scripts", "open-webui.exe")
+            if os.path.exists(open_webui_exe):
+                log_boot("Starting Open WebUI on :3000...")
+                env = os.environ.copy()
+                env["OLLAMA_BASE_URL"] = "http://127.0.0.1:11434"
+                env["WEBUI_AUTH"] = "false"
+                env["PORT"] = str(OPEN_WEBUI_PORT)
+                env["DATA_DIR"] = os.path.join(BOSS_ROOT, "data")
+                env["PYTHONIOENCODING"] = "utf-8"
+                os.makedirs(env["DATA_DIR"], exist_ok=True)
+                proc = subprocess.Popen(
+                    [open_webui_exe, "serve", "--port", str(OPEN_WEBUI_PORT)],
+                    cwd=BOSS_ROOT,
+                    env=env,
+                    stdout=subprocess.DEVNULL,
+                    stderr=subprocess.DEVNULL,
+                    creationflags=NO_WINDOW,
+                )
+                pid_file = os.path.join(BOSS_ROOT, "runtime", "open-webui.pid")
+                os.makedirs(os.path.dirname(pid_file), exist_ok=True)
+                with open(pid_file, "w") as f:
+                    f.write(str(proc.pid))
+                log_boot(f"Open WebUI started (PID: {proc.pid})")
+            else:
+                log_boot(f"Open WebUI not found at {open_webui_exe} — skipping")
+    except Exception as e:
+        log_boot(f"Open WebUI error: {e}")
+
+    # 7. Run initial sync (moved from startup.bat)
     try:
         sync_script = os.path.join(HUB_DIR, "scripts", "sync-all.ps1")
         if os.path.exists(sync_script):
@@ -278,4 +318,4 @@ if __name__ == "__main__":
     except Exception as e:
         log_boot(f"Sync error: {e}")
 
-    log_boot("=== Boot sequence complete (5 services + sync) ===")
+    log_boot("=== Boot sequence complete (6 services + sync) ===")
